@@ -1,0 +1,1281 @@
+basePath: /api
+definitions:
+  domain.AddMemberDTO:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  domain.AddReactionDTO:
+    properties:
+      reaction:
+        example: "\U0001F44D"
+        type: string
+    type: object
+  domain.Chat:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_global:
+        type: boolean
+      last_message:
+        $ref: '#/definitions/domain.Message'
+      members:
+        items:
+          $ref: '#/definitions/domain.ChatMember'
+        type: array
+      name:
+        type: string
+      type:
+        description: '"direct" or "group"'
+        type: string
+      unread_count:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  domain.ChatMember:
+    properties:
+      chat_id:
+        type: integer
+      joined_at:
+        type: string
+      last_read_message_id:
+        type: integer
+      role:
+        description: '"owner", "admin", "member"'
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+      user_id:
+        type: integer
+    type: object
+  domain.CreateChatDTO:
+    properties:
+      member_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        example: Project Team
+        type: string
+      type:
+        example: group
+        type: string
+    type: object
+  domain.CreateMessageDTO:
+    properties:
+      chat_id:
+        example: 1
+        type: integer
+      content:
+        example: Hello world!
+        type: string
+    type: object
+  domain.File:
+    properties:
+      created_at:
+        type: string
+      file_path:
+        type: string
+      file_size:
+        type: integer
+      filename:
+        type: string
+      id:
+        type: integer
+      mime_type:
+        type: string
+      uploader_id:
+        type: integer
+    type: object
+  domain.Message:
+    properties:
+      chat_id:
+        type: integer
+      content:
+        type: string
+      created_at:
+        type: string
+      file:
+        $ref: '#/definitions/domain.File'
+      file_id:
+        type: integer
+      id:
+        type: integer
+      is_deleted:
+        type: boolean
+      is_edited:
+        type: boolean
+      reactions:
+        items:
+          $ref: '#/definitions/domain.Reaction'
+        type: array
+      sender:
+        $ref: '#/definitions/domain.User'
+      sender_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  domain.Reaction:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      message_id:
+        type: integer
+      reaction:
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+      user_id:
+        type: integer
+    type: object
+  domain.ReactionGroup:
+    properties:
+      count:
+        type: integer
+      reaction:
+        type: string
+      user_ids:
+        items:
+          type: integer
+        type: array
+      users:
+        items:
+          $ref: '#/definitions/domain.User'
+        type: array
+    type: object
+  domain.ReadChatDTO:
+    properties:
+      last_read_message_id:
+        type: integer
+    type: object
+  domain.UpdateChatDTO:
+    properties:
+      name:
+        example: New Group Name
+        type: string
+    type: object
+  domain.UpdateMemberRoleDTO:
+    properties:
+      role:
+        example: admin
+        type: string
+    type: object
+  domain.UpdateMessageDTO:
+    properties:
+      content:
+        example: Updated text
+        type: string
+    type: object
+  domain.User:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      is_online:
+        type: boolean
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  http.Response:
+    properties:
+      data: {}
+      error:
+        type: string
+      success:
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  title: Чат для Системы HRM
+  version: "1.0"
+paths:
+  /chats:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает все чаты, участником которых является текущий пользователь.
+        Для личных (direct) чатов имя автоматически устанавливается как имя собеседника.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.Chat'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить чаты пользователя
+      tags:
+      - чаты
+    post:
+      consumes:
+      - application/json
+      description: Создает личный (direct) или групповой (group) чат. Личный чат требует
+        ровно 1 собеседника (нельзя с самим собой). Групповой чат требует минимум
+        3 участников.
+      parameters:
+      - description: Параметры создания чата
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateChatDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Chat'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Создать новый чат
+      tags:
+      - чаты
+  /chats/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Полностью удаляет чат. Разрешено владельцу группового чата или
+        участнику личного чата.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Удалить чат
+      tags:
+      - чаты
+    get:
+      consumes:
+      - application/json
+      description: Возвращает информацию о чате и его участниках по идентификатору
+        чата
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Chat'
+              type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить детали чата по ID
+      tags:
+      - чаты
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет название группового чата. Для личных (direct) чатов операция
+        запрещена.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новое имя чата
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateChatDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Изменить имя группового чата
+      tags:
+      - чаты
+  /chats/{id}/avatar:
+    get:
+      description: Возвращает изображение аватарки указанного чата
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить аватар чата по ID
+      tags:
+      - чаты
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает изображение аватарки группового или личного чата
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Файл изображения аватарки
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Chat'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Загрузить аватар чата
+      tags:
+      - чаты
+  /chats/{id}/files:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает файл и отправляет сообщение с прикрепленным файлом в
+        указанный чат
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Файл для загрузки
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Необязательная подпись к файлу
+        in: formData
+        name: caption
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Message'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Загрузить файл в чат
+      tags:
+      - чаты
+  /chats/{id}/members:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех участников чата и их ролей
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.ChatMember'
+                  type: array
+              type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить участников чата
+      tags:
+      - чаты
+    post:
+      consumes:
+      - application/json
+      description: Добавляет пользователя в групповой чат. Запрещено для личных (direct)
+        чатов. Разрешено владельцу или админу.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID добавляемого пользователя
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AddMemberDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Добавить участника в групповой чат
+      tags:
+      - чаты
+  /chats/{id}/members/{user_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет участника из группового чата. Запрещено для личных (direct)
+        чатов. Разрешено владельцу или админу.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID исключаемого пользователя
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Удалить участника из группового чата
+      tags:
+      - чаты
+    post:
+      consumes:
+      - application/json
+      description: Изменяет роль участника на 'admin' или 'member'. Запрещено для
+        личных (direct) чатов. Нельзя назначить роль 'owner'.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID целевого пользователя
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Новая роль ('admin' или 'member')
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateMemberRoleDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Изменить роль участника группового чата
+      tags:
+      - чаты
+  /chats/{id}/out:
+    delete:
+      consumes:
+      - application/json
+      description: Позволяет пользователю выйти из группового чата. Для личных (direct)
+        чатов операция запрещена.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Выйти из группового чата
+      tags:
+      - чаты
+  /chats/{id}/read:
+    post:
+      consumes:
+      - application/json
+      description: Обновляет отметку о прочтении до указанного last_read_message_id
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID последнего прочитанного сообщения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ReadChatDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Отметить сообщения чата как прочитанные
+      tags:
+      - чаты
+  /files/{id}/download:
+    get:
+      description: Скачивает прикрепленный к сообщению файл по его идентификатору
+        (fileID)
+      parameters:
+      - description: ID файла
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Скачать прикрепленный файл
+      tags:
+      - файлы
+  /global:
+    get:
+      description: Присоединяет вызывающего пользователя к общему чату (если он ещё
+        не участник) и возвращает его данные вместе с последними сообщениями.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить общий чат
+      tags:
+      - общий чат
+  /messages:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает историю сообщений указанного чата (требуется параметр
+        query chat_id)
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: integer
+      - description: Количество сообщений (по умолчанию 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение для пагинации
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.Message'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить историю сообщений
+      tags:
+      - сообщения
+    post:
+      consumes:
+      - application/json
+      description: Отправляет текстовое сообщение в чат (содержимое зашифровано алгоритмом
+        AES-256-GCM в базе данных)
+      parameters:
+      - description: Данные отправляемого сообщения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateMessageDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Message'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Отправить текстовое сообщение
+      tags:
+      - сообщения
+  /messages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Мягко удаляет сообщение (текст заменяется на "Сообщение удалено").
+        Разрешено только автору.
+      parameters:
+      - description: ID сообщения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Удалить сообщение (софт-удаление)
+      tags:
+      - сообщения
+    put:
+      consumes:
+      - application/json
+      description: Изменяет текст отправленного сообщения. Разрешено только автору
+        сообщения.
+      parameters:
+      - description: ID сообщения
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новый текст сообщения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateMessageDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Message'
+              type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Редактировать текст сообщения
+      tags:
+      - сообщения
+  /messages/{id}/reactions:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет реакцию пользователя с указанного сообщения
+      parameters:
+      - description: ID сообщения
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Emoji реакции для удаления
+        in: query
+        name: reaction
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Удалить реакцию с сообщения
+      tags:
+      - сообщения
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список реакций, сгруппированных по emoji для указанного
+        сообщения
+      parameters:
+      - description: ID сообщения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.ReactionGroup'
+                  type: array
+              type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить список реакций сообщения
+      tags:
+      - сообщения
+    post:
+      consumes:
+      - application/json
+      description: Ставит emoji-реакцию на сообщение. Один пользователь может поставить
+        не более одной реакции на сообщение.
+      parameters:
+      - description: ID сообщения
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Emoji реакции
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AddReactionDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Reaction'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Добавить или обновить реакцию на сообщение
+      tags:
+      - сообщения
+  /messages/file:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает файл в чат, указанный в поле chat_id формы
+      parameters:
+      - description: ID чата
+        in: formData
+        name: chat_id
+        required: true
+        type: integer
+      - description: Файл для загрузки
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Необязательная подпись
+        in: formData
+        name: caption
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Message'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Загрузить файл в чат (альтернативный эндпоинт)
+      tags:
+      - сообщения
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех зарегистрированных пользователей системы
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.User'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить всех пользователей
+      tags:
+      - пользователи
+  /users/{id}/avatar:
+    get:
+      description: Возвращает изображение аватарки указанного пользователя
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить аватар пользователя по ID
+      tags:
+      - пользователи
+  /users/avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает изображение аватарки текущего пользователя
+      parameters:
+      - description: Файл изображения аватарки
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.User'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Загрузить аватар пользователя
+      tags:
+      - пользователи
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает данные профиля авторизованного пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.User'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Получить профиль текущего пользователя
+      tags:
+      - пользователи
+  /users/search:
+    get:
+      consumes:
+      - application/json
+      description: Поиск пользователей по имени пользователя или email
+      parameters:
+      - description: 'Поисковая строка (например: fed)'
+        in: query
+        name: query
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.User'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Поиск пользователей
+      tags:
+      - пользователи
+securityDefinitions:
+  LoginHeaderAuth:
+    description: 'Передайте имя пользователя или email для авторизации (например:
+      amin, fed, ernest или far@gmail.com)'
+    in: header
+    name: Login
+    type: apiKey
+swagger: "2.0"
