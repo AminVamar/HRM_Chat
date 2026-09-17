@@ -22,7 +22,7 @@ const docTemplate = `{
                         "LoginHeaderAuth": []
                     }
                 ],
-                "description": "Возвращает все чаты, участником которых является текущий пользователь. Для личных (direct) чатов имя автоматически устанавливается как имя собеседника.",
+                "description": "Возвращает все чаты, участником которых является текущий пользователь. Для личных (direct) чатов имя автоматически устанавливается как имя собеседника. Можно отфильтровать по типу: direct или group.",
                 "consumes": [
                     "application/json"
                 ],
@@ -33,6 +33,18 @@ const docTemplate = `{
                     "чаты"
                 ],
                 "summary": "Получить чаты пользователя",
+                "parameters": [
+                    {
+                        "enum": [
+                            "direct",
+                            "group"
+                        ],
+                        "type": "string",
+                        "description": "Тип чата",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

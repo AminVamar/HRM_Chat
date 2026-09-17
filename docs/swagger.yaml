@@ -211,6 +211,15 @@ paths:
       - application/json
       description: Возвращает все чаты, участником которых является текущий пользователь.
         Для личных (direct) чатов имя автоматически устанавливается как имя собеседника.
+        Можно отфильтровать по типу: direct или group.
+      parameters:
+      - description: Тип чата
+        enum:
+        - direct
+        - group
+        in: query
+        name: type
+        type: string
       produces:
       - application/json
       responses:

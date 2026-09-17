@@ -75,12 +75,14 @@ func (h *ChatHandler) CreateChat(w http.ResponseWriter, r *http.Request) {
 
 // GetMyChats godoc
 // @Summary      Получить чаты пользователя
-// @Description  Возвращает все чаты, участником которых является текущий пользователь. Для личных (direct) чатов имя автоматически устанавливается как имя собеседника.
+// @Description  Возвращает все чаты, участником которых является текущий пользователь. Для личных (direct) чатов имя автоматически устанавливается как имя собеседника. Можно отфильтровать по типу: direct или group.
 // @Tags         чаты
 // @Accept       json
 // @Produce      json
 // @Security     LoginHeaderAuth
+// @Param        type  query     string  false  "Тип чата"  Enums(direct, group)
 // @Success      200 {object} Response{data=[]domain.Chat}
+// @Failure      400 {object} Response
 // @Failure      401 {object} Response
 // @Router       /chats [get]
 func (h *ChatHandler) GetMyChats(w http.ResponseWriter, r *http.Request) {
@@ -90,10 +92,27 @@ func (h *ChatHandler) GetMyChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chatType := r.URL.Query().Get("type")
+	if chatType != "" && chatType != domain.ChatTypeDirect && chatType != domain.ChatTypeGroup {
+		RespondError(w, http.StatusBadRequest, "type должен быть direct или group")
+		return
+	}
+
 	chats, err := h.chatUseCase.GetChatsForUser(r.Context(), user.ID)
 	if err != nil {
 		RespondError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Фильтр по типу чата
+	if chatType != "" {
+		filtered := make([]domain.Chat, 0, len(chats))
+		for _, c := range chats {
+			if c.Type == chatType {
+				filtered = append(filtered, c)
+			}
+		}
+		chats = filtered
 	}
 
 	for i := range chats {
