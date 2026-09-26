@@ -2,9 +2,11 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	_ "chat-backend/docs"
 	"chat-backend/internal/delivery/ws"
+	"chat-backend/internal/usecase"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -17,10 +19,16 @@ func NewRouter(
 	globalHandler *GlobalHandler,
 	wsHandler *ws.WSHandler,
 	authMiddleware *AuthMiddleware,
+	avatarDir string,
 ) *mux.Router {
 	r := mux.NewRouter()
 
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	// Аватарки отдаём напрямую без авторизации, чтобы avatar_url можно было подставить в <img src>.
+	// Открыта только папка avatars, файлы из чатов по-прежнему идут через /api/files/{id}/download.
+	r.PathPrefix(usecase.AvatarURLPrefix).
+		Handler(http.StripPrefix(usecase.AvatarURLPrefix, avatarFileServer(avatarDir))).
+		Methods(http.MethodGet, http.MethodHead)
 	r.HandleFunc("/api/ws", wsHandler.ServeWS).Methods(http.MethodGet)
 
 	api := r.PathPrefix("/api").Subrouter()
@@ -61,4 +69,17 @@ func NewRouter(
 	api.HandleFunc("/global", globalHandler.GetGlobal).Methods(http.MethodGet)
 
 	return r
+}
+
+// avatarFileServer отдаёт файлы из папки аватарок без листинга директории.
+func avatarFileServer(dir string) http.Handler {
+	fs := http.FileServer(http.Dir(dir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "" || strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		fs.ServeHTTP(w, r)
+	})
 }

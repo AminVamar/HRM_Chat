@@ -21,7 +21,7 @@ type UserUseCase interface {
 	Search(ctx context.Context, query string) ([]domain.User, error)
 	GetAll(ctx context.Context) ([]domain.User, error)
 	UploadAvatar(ctx context.Context, userID int64, fileHeader *multipart.FileHeader) (*domain.User, error)
-	GetAvatarPath(ctx context.Context, userID int64) (string, error)
+	GetAvatarURL(ctx context.Context, userID int64) (string, error)
 }
 
 type userUseCase struct {
@@ -90,7 +90,7 @@ func (u *userUseCase) UploadAvatar(ctx context.Context, userID int64, fileHeader
 		return nil, fmt.Errorf("failed to create avatars directory: %w", err)
 	}
 
-	filename := fmt.Sprintf("user_%d_%d_%s", userID, time.Now().UnixNano(), filepath.Base(fileHeader.Filename))
+	filename := fmt.Sprintf("user_%d_%d_%s", userID, time.Now().UnixNano(), safeFileName(fileHeader.Filename))
 	savePath := filepath.Join(avatarDir, filename)
 
 	dst, err := os.Create(savePath)
@@ -103,16 +103,17 @@ func (u *userUseCase) UploadAvatar(ctx context.Context, userID int64, fileHeader
 		return nil, fmt.Errorf("failed to save avatar file: %w", err)
 	}
 
-	avatarURL := fmt.Sprintf("/api/users/%d/avatar", userID)
-	if err := u.userRepo.UpdateAvatar(ctx, userID, avatarURL); err != nil {
+	url := avatarURL(filename)
+	if err := u.userRepo.UpdateAvatar(ctx, userID, url); err != nil {
 		return nil, fmt.Errorf("failed to update user avatar in DB: %w", err)
 	}
 
-	user.AvatarURL = avatarURL
+	user.AvatarURL = url
 	return user, nil
 }
 
-func (u *userUseCase) GetAvatarPath(ctx context.Context, userID int64) (string, error) {
+// GetAvatarURL возвращает ссылку на аватарку пользователя.
+func (u *userUseCase) GetAvatarURL(ctx context.Context, userID int64) (string, error) {
 	user, err := u.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return "", err
@@ -120,7 +121,5 @@ func (u *userUseCase) GetAvatarPath(ctx context.Context, userID int64) (string, 
 	if user.AvatarURL == "" {
 		return "", domain.ErrNotFound
 	}
-
-	avatarDir := filepath.Join(u.uploadDir, "avatars")
-	return findLatestByPrefix(avatarDir, fmt.Sprintf("user_%d_", userID))
+	return user.AvatarURL, nil
 }

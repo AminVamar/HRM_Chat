@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -60,6 +61,11 @@ func main() {
 		log.Fatalf("Ошибка миграции: %v", err)
 	}
 
+	avatarDir := filepath.Join(cfg.UploadDir, "avatars")
+	if err := pg.FixLegacyAvatarURLs(ctx, avatarDir, usecase.AvatarURLPrefix); err != nil {
+		log.Printf("Не удалось обновить старые ссылки на аватарки: %v", err)
+	}
+
 	userRepo := postgres.NewUserRepository(pg.Pool)
 	chatRepo := postgres.NewChatRepository(pg.Pool)
 	messageRepo := postgres.NewMessageRepository(pg.Pool)
@@ -92,6 +98,7 @@ func main() {
 		globalHandler,
 		wsHandler,
 		authMiddleware,
+		avatarDir,
 	)
 
 	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())

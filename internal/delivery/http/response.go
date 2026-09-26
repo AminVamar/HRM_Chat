@@ -11,6 +11,11 @@ type Response struct {
 	Error   string      `json:"error,omitempty"`
 }
 
+// AvatarResponse — ответ на GET /users/{id}/avatar и GET /chats/{id}/avatar.
+type AvatarResponse struct {
+	AvatarURL string `json:"avatar_url" example:"/uploads/avatars/user_3_1758854400000000000_photo.jpg"`
+}
+
 func RespondJSON(w http.ResponseWriter, status int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

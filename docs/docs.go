@@ -67,6 +67,12 @@ const docTemplate = `{
                             ]
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.Response"
+                        }
+                    },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
@@ -338,7 +344,10 @@ const docTemplate = `{
                         "LoginHeaderAuth": []
                     }
                 ],
-                "description": "Возвращает изображение аватарки указанного чата",
+                "description": "Возвращает адрес аватарки чата (/uploads/avatars/\u003cимя файла\u003e). Для личного чата — адрес аватарки собеседника",
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "чаты"
                 ],
@@ -356,7 +365,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "file"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/http.AvatarResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "403": {
@@ -379,7 +400,7 @@ const docTemplate = `{
                         "LoginHeaderAuth": []
                     }
                 ],
-                "description": "Загружает изображение аватарки группового или личного чата",
+                "description": "Загружает изображение аватарки группового чата. В ответе avatar_url — прямая ссылка на файл вида /uploads/avatars/\u003cимя файла\u003e",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -1575,7 +1596,7 @@ const docTemplate = `{
                         "LoginHeaderAuth": []
                     }
                 ],
-                "description": "Загружает изображение аватарки текущего пользователя",
+                "description": "Загружает изображение аватарки текущего пользователя. В ответе avatar_url — прямая ссылка на файл вида /uploads/avatars/\u003cимя файла\u003e, её можно сразу ставить в \u003cimg src\u003e (авторизация не нужна)",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -1746,7 +1767,10 @@ const docTemplate = `{
                         "LoginHeaderAuth": []
                     }
                 ],
-                "description": "Возвращает изображение аватарки указанного пользователя",
+                "description": "Возвращает адрес аватарки указанного пользователя (/uploads/avatars/\u003cимя файла\u003e). Саму картинку можно открыть по этому адресу без авторизации",
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "пользователи"
                 ],
@@ -1764,7 +1788,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "file"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/http.AvatarResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -1823,7 +1859,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
-                    "description": "\"direct\" or \"group\"",
                     "type": "string"
                 },
                 "unread_count": {
@@ -1847,7 +1882,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "role": {
-                    "description": "\"owner\", \"admin\", \"member\"",
                     "type": "string"
                 },
                 "user": {
@@ -2064,6 +2098,15 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "http.AvatarResponse": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string",
+                    "example": "/uploads/avatars/user_3_1758854400000000000_photo.jpg"
                 }
             }
         },

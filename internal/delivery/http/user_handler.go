@@ -102,7 +102,7 @@ func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 // UploadAvatar godoc
 // @Summary      Загрузить аватар пользователя
-// @Description  Загружает изображение аватарки текущего пользователя
+// @Description  Загружает изображение аватарки текущего пользователя. В ответе avatar_url — прямая ссылка на файл вида /uploads/avatars/<имя файла>, её можно сразу ставить в <img src> (авторизация не нужна)
 // @Tags         пользователи
 // @Accept       multipart/form-data
 // @Produce      json
@@ -144,11 +144,12 @@ func (h *UserHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 
 // GetAvatar godoc
 // @Summary      Получить аватар пользователя по ID
-// @Description  Возвращает изображение аватарки указанного пользователя
+// @Description  Возвращает адрес аватарки указанного пользователя (/uploads/avatars/<имя файла>). Саму картинку можно открыть по этому адресу без авторизации
 // @Tags         пользователи
+// @Produce      json
 // @Security     LoginHeaderAuth
 // @Param        id path int true "ID пользователя"
-// @Success      200 {file} binary
+// @Success      200 {object} Response{data=AvatarResponse}
 // @Failure      404 {object} Response
 // @Router       /users/{id}/avatar [get]
 func (h *UserHandler) GetAvatar(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +159,7 @@ func (h *UserHandler) GetAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := h.userUseCase.GetAvatarPath(r.Context(), userID)
+	avatarURL, err := h.userUseCase.GetAvatarURL(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			RespondError(w, http.StatusNotFound, "Аватар не найден")
@@ -168,5 +169,5 @@ func (h *UserHandler) GetAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, filePath)
+	RespondJSON(w, http.StatusOK, AvatarResponse{AvatarURL: avatarURL})
 }

@@ -604,7 +604,7 @@ func (h *ChatHandler) UploadChatFile(w http.ResponseWriter, r *http.Request) {
 
 // UploadAvatar godoc
 // @Summary      Загрузить аватар чата
-// @Description  Загружает изображение аватарки группового или личного чата
+// @Description  Загружает изображение аватарки группового чата. В ответе avatar_url — прямая ссылка на файл вида /uploads/avatars/<имя файла>
 // @Tags         чаты
 // @Accept       multipart/form-data
 // @Produce      json
@@ -656,11 +656,12 @@ func (h *ChatHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 
 // GetAvatar godoc
 // @Summary      Получить аватар чата по ID
-// @Description  Возвращает изображение аватарки указанного чата
+// @Description  Возвращает адрес аватарки чата (/uploads/avatars/<имя файла>). Для личного чата — адрес аватарки собеседника
 // @Tags         чаты
+// @Produce      json
 // @Security     LoginHeaderAuth
 // @Param        id path int true "ID чата"
-// @Success      200 {file} binary
+// @Success      200 {object} Response{data=AvatarResponse}
 // @Failure      403 {object} Response
 // @Failure      404 {object} Response
 // @Router       /chats/{id}/avatar [get]
@@ -677,7 +678,7 @@ func (h *ChatHandler) GetAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := h.chatUseCase.GetAvatarPath(r.Context(), user.ID, chatID)
+	avatarURL, err := h.chatUseCase.GetAvatarURL(r.Context(), user.ID, chatID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotInChat) {
 			RespondError(w, http.StatusForbidden, err.Error())
@@ -691,5 +692,5 @@ func (h *ChatHandler) GetAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, filePath)
+	RespondJSON(w, http.StatusOK, AvatarResponse{AvatarURL: avatarURL})
 }

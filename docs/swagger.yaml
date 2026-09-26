@@ -30,7 +30,6 @@ definitions:
       name:
         type: string
       type:
-        description: '"direct" or "group"'
         type: string
       unread_count:
         type: integer
@@ -46,7 +45,6 @@ definitions:
       last_read_message_id:
         type: integer
       role:
-        description: '"owner", "admin", "member"'
         type: string
       user:
         $ref: '#/definitions/domain.User'
@@ -191,6 +189,12 @@ definitions:
       username:
         type: string
     type: object
+  http.AvatarResponse:
+    properties:
+      avatar_url:
+        example: /uploads/avatars/user_3_1758854400000000000_photo.jpg
+        type: string
+    type: object
   http.Response:
     properties:
       data: {}
@@ -209,9 +213,9 @@ paths:
     get:
       consumes:
       - application/json
-      description: Возвращает все чаты, участником которых является текущий пользователь.
+      description: 'Возвращает все чаты, участником которых является текущий пользователь.
         Для личных (direct) чатов имя автоматически устанавливается как имя собеседника.
-        Можно отфильтровать по типу: direct или group.
+        Можно отфильтровать по типу: direct или group.'
       parameters:
       - description: Тип чата
         enum:
@@ -234,6 +238,10 @@ paths:
                     $ref: '#/definitions/domain.Chat'
                   type: array
               type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
         "401":
           description: Unauthorized
           schema:
@@ -402,18 +410,26 @@ paths:
       - чаты
   /chats/{id}/avatar:
     get:
-      description: Возвращает изображение аватарки указанного чата
+      description: Возвращает адрес аватарки чата (/uploads/avatars/<имя файла>).
+        Для личного чата — адрес аватарки собеседника
       parameters:
       - description: ID чата
         in: path
         name: id
         required: true
         type: integer
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            type: file
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/http.AvatarResponse'
+              type: object
         "403":
           description: Forbidden
           schema:
@@ -430,7 +446,8 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Загружает изображение аватарки группового или личного чата
+      description: Загружает изображение аватарки группового чата. В ответе avatar_url
+        — прямая ссылка на файл вида /uploads/avatars/<имя файла>
       parameters:
       - description: ID чата
         in: path
@@ -1159,18 +1176,26 @@ paths:
       - пользователи
   /users/{id}/avatar:
     get:
-      description: Возвращает изображение аватарки указанного пользователя
+      description: Возвращает адрес аватарки указанного пользователя (/uploads/avatars/<имя
+        файла>). Саму картинку можно открыть по этому адресу без авторизации
       parameters:
       - description: ID пользователя
         in: path
         name: id
         required: true
         type: integer
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            type: file
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/http.AvatarResponse'
+              type: object
         "404":
           description: Not Found
           schema:
@@ -1184,7 +1209,9 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Загружает изображение аватарки текущего пользователя
+      description: Загружает изображение аватарки текущего пользователя. В ответе
+        avatar_url — прямая ссылка на файл вида /uploads/avatars/<имя файла>, её можно
+        сразу ставить в <img src> (авторизация не нужна)
       parameters:
       - description: Файл изображения аватарки
         in: formData

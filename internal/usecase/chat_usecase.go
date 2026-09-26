@@ -28,7 +28,7 @@ type ChatUseCase interface {
 	UpdateMemberRole(ctx context.Context, currentUserID, chatID, targetUserID int64, newRole string) error
 	RemoveMember(ctx context.Context, currentUserID, chatID, targetUserID int64) error
 	UploadAvatar(ctx context.Context, userID, chatID int64, fileHeader *multipart.FileHeader) (*domain.Chat, error)
-	GetAvatarPath(ctx context.Context, userID, chatID int64) (string, error)
+	GetAvatarURL(ctx context.Context, userID, chatID int64) (string, error)
 	JoinGlobalChat(ctx context.Context, userID int64) (*domain.Chat, error)
 }
 
@@ -460,7 +460,7 @@ func (c *chatUseCase) UploadAvatar(ctx context.Context, userID, chatID int64, fi
 		return nil, fmt.Errorf("failed to create avatars directory: %w", err)
 	}
 
-	filename := fmt.Sprintf("chat_%d_%d_%s", chatID, time.Now().UnixNano(), filepath.Base(fileHeader.Filename))
+	filename := fmt.Sprintf("chat_%d_%d_%s", chatID, time.Now().UnixNano(), safeFileName(fileHeader.Filename))
 	savePath := filepath.Join(avatarDir, filename)
 
 	dst, err := os.Create(savePath)
@@ -473,15 +473,15 @@ func (c *chatUseCase) UploadAvatar(ctx context.Context, userID, chatID int64, fi
 		return nil, fmt.Errorf("failed to save avatar file: %w", err)
 	}
 
-	avatarURL := fmt.Sprintf("/api/chats/%d/avatar", chatID)
-	if err := c.chatRepo.UpdateAvatar(ctx, chatID, avatarURL); err != nil {
+	if err := c.chatRepo.UpdateAvatar(ctx, chatID, avatarURL(filename)); err != nil {
 		return nil, fmt.Errorf("failed to update chat avatar in DB: %w", err)
 	}
 
 	return c.GetChatByID(ctx, userID, chatID)
 }
 
-func (c *chatUseCase) GetAvatarPath(ctx context.Context, userID, chatID int64) (string, error) {
+// GetAvatarURL возвращает ссылку на аватарку чата. Для личного чата — аватарку собеседника.
+func (c *chatUseCase) GetAvatarURL(ctx context.Context, userID, chatID int64) (string, error) {
 	isMember, err := c.chatRepo.IsMember(ctx, chatID, userID)
 	if err != nil || !isMember {
 		return "", domain.ErrUserNotInChat
@@ -492,31 +492,24 @@ func (c *chatUseCase) GetAvatarPath(ctx context.Context, userID, chatID int64) (
 		return "", err
 	}
 
-	avatarDir := filepath.Join(c.uploadDir, "avatars")
-
+	url := chat.AvatarURL
 	if chat.Type == domain.ChatTypeDirect {
 		members, err := c.chatRepo.GetMembers(ctx, chatID)
 		if err != nil {
 			return "", err
 		}
 
-		var companionID int64
+		url = ""
 		for _, m := range members {
-			if m.UserID != userID {
-				companionID = m.UserID
+			if m.UserID != userID && m.User != nil {
+				url = m.User.AvatarURL
 				break
 			}
 		}
-		if companionID == 0 {
-			return "", domain.ErrNotFound
-		}
-
-		return findLatestByPrefix(avatarDir, fmt.Sprintf("user_%d_", companionID))
 	}
 
-	if chat.AvatarURL == "" {
+	if url == "" {
 		return "", domain.ErrNotFound
 	}
-
-	return findLatestByPrefix(avatarDir, fmt.Sprintf("chat_%d_", chatID))
+	return url, nil
 }
