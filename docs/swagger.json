@@ -2118,7 +2118,7 @@
     },
     "securityDefinitions": {
         "LoginHeaderAuth": {
-            "description": "Передайте имя пользователя или email для авторизации (например: amin, fed, ernest или far@gmail.com)",
+            "description": "Передайте имя пользователя в Login (например: amin). Если пользователя нет, он будет создан автоматически. Поиск без учёта регистра.",
             "type": "apiKey",
             "name": "Login",
             "in": "header"

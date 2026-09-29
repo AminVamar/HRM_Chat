@@ -19,7 +19,7 @@ func NewUserRepository(pool *pgxpool.Pool) *userRepository {
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, error) {
-	query := `SELECT id, username, email, avatar_url, created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at FROM users WHERE id = $1`
 	var u domain.User
 	err := r.pool.QueryRow(ctx, query, id).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
@@ -31,22 +31,35 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, e
 	return &u, nil
 }
 
-func (r *userRepository) GetByLogin(ctx context.Context, login string) (*domain.User, error) {
-	query := `SELECT id, username, email, avatar_url, created_at, updated_at FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)`
+func (r *userRepository) GetOrCreateByUsername(ctx context.Context, username string) (*domain.User, error) {
+	const selectQuery = `SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at
+		FROM users WHERE LOWER(username) = LOWER($1)`
 	var u domain.User
-	err := r.pool.QueryRow(ctx, query, login).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+	err := r.pool.QueryRow(ctx, selectQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+	if err == nil {
+		return &u, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("user lookup: %w", err)
+	}
+
+	const insertQuery = `INSERT INTO users (username) VALUES ($1)
+		ON CONFLICT (LOWER(username)) DO NOTHING
+		RETURNING id, username, COALESCE(email, ''), avatar_url, created_at, updated_at`
+	err = r.pool.QueryRow(ctx, insertQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Другой запрос успел создать пользователя. Читаем его отдельным запросом.
+		err = r.pool.QueryRow(ctx, selectQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+	}
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
-		}
-		return nil, fmt.Errorf("user GetByLogin: %w", err)
+		return nil, fmt.Errorf("user get or create: %w", err)
 	}
 	return &u, nil
 }
 
 func (r *userRepository) Search(ctx context.Context, query string) ([]domain.User, error) {
 	sqlQuery := `
-		SELECT id, username, email, avatar_url, created_at, updated_at 
+		SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at
 		FROM users 
 		WHERE username ILIKE $1 OR email ILIKE $1
 		ORDER BY username ASC
@@ -74,7 +87,7 @@ func (r *userRepository) Search(ctx context.Context, query string) ([]domain.Use
 }
 
 func (r *userRepository) GetAll(ctx context.Context) ([]domain.User, error) {
-	sqlQuery := `SELECT id, username, email, avatar_url, created_at, updated_at FROM users ORDER BY username ASC`
+	sqlQuery := `SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at FROM users ORDER BY username ASC`
 	rows, err := r.pool.Query(ctx, sqlQuery)
 	if err != nil {
 		return nil, fmt.Errorf("user GetAll: %w", err)

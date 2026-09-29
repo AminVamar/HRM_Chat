@@ -190,7 +190,7 @@ func (r *chatRepository) IsMember(ctx context.Context, chatID, userID int64) (bo
 
 const memberColumns = `
 	cm.chat_id, cm.user_id, cm.role, cm.joined_at, cm.last_read_message_id,
-	u.id, u.username, u.email, u.avatar_url, u.created_at, u.updated_at`
+	u.id, u.username, COALESCE(u.email, ''), u.avatar_url, u.created_at, u.updated_at`
 
 func scanMember(row rowScanner) (*domain.ChatMember, error) {
 	var cm domain.ChatMember

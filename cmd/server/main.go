@@ -31,7 +31,7 @@ const messageRetentionDays = 30
 // @securityDefinitions.apikey LoginHeaderAuth
 // @in header
 // @name Login
-// @description Передайте имя пользователя или email для авторизации (например: amin, fed, ernest или far@gmail.com)
+// @description Передайте имя пользователя в Login (например: amin). Если пользователя нет, он будет создан автоматически. Поиск без учёта регистра.
 func main() {
 	cfg := config.LoadConfig()
 	ctx := context.Background()

@@ -1,9 +1,11 @@
 package ws
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
+	"chat-backend/internal/domain"
 	"chat-backend/internal/usecase"
 )
 
@@ -39,9 +41,17 @@ func (h *WSHandler) ServeWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userUseCase.GetByLogin(r.Context(), login)
+	user, err := h.userUseCase.GetOrCreateByUsername(r.Context(), login)
 	if err != nil {
-		http.Error(w, "Unauthorized: user not found", http.StatusUnauthorized)
+		switch {
+		case errors.Is(err, domain.ErrUnauthorized):
+			http.Error(w, "Username is required", http.StatusUnauthorized)
+		case errors.Is(err, domain.ErrInvalidInput):
+			http.Error(w, "Invalid username", http.StatusBadRequest)
+		default:
+			log.Printf("Failed to load or create WebSocket user: %v", err)
+			http.Error(w, "Failed to load or create user", http.StatusInternalServerError)
+		}
 		return
 	}
 

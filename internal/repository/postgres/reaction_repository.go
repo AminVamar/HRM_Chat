@@ -57,7 +57,7 @@ func (r *reactionRepository) Delete(ctx context.Context, messageID, userID int64
 func (r *reactionRepository) GetByMessageID(ctx context.Context, messageID int64) ([]domain.Reaction, error) {
 	query := `
 		SELECT r.id, r.message_id, r.user_id, r.reaction, r.created_at,
-		       u.id, u.username, u.email, u.avatar_url, u.created_at, u.updated_at
+		       u.id, u.username, COALESCE(u.email, ''), u.avatar_url, u.created_at, u.updated_at
 		FROM reactions r
 		JOIN users u ON r.user_id = u.id
 		WHERE r.message_id = $1

@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"chat-backend/internal/domain"
@@ -32,9 +33,16 @@ func (m *AuthMiddleware) HeaderAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := m.userUseCase.GetByLogin(r.Context(), login)
+		user, err := m.userUseCase.GetOrCreateByUsername(r.Context(), login)
 		if err != nil {
-			RespondError(w, http.StatusUnauthorized, "Unauthorized: user not found in system")
+			switch {
+			case errors.Is(err, domain.ErrUnauthorized):
+				RespondError(w, http.StatusUnauthorized, "Username is required")
+			case errors.Is(err, domain.ErrInvalidInput):
+				RespondError(w, http.StatusBadRequest, "Invalid username")
+			default:
+				RespondError(w, http.StatusInternalServerError, "Failed to load or create user")
+			}
 			return
 		}
 

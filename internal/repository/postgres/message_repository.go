@@ -21,7 +21,7 @@ func NewMessageRepository(pool *pgxpool.Pool) *messageRepository {
 
 const messageColumns = `
 	m.id, m.chat_id, m.sender_id, m.content, m.file_id, m.is_edited, m.is_deleted, m.created_at, m.updated_at,
-	u.id, u.username, u.email, u.avatar_url, u.created_at, u.updated_at,
+	u.id, u.username, COALESCE(u.email, ''), u.avatar_url, u.created_at, u.updated_at,
 	f.id, f.filename, f.file_path, f.file_size, f.mime_type, f.uploader_id, f.created_at`
 
 const messageFrom = `

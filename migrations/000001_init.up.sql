@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) UNIQUE,
     avatar_url VARCHAR(512) NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -63,11 +63,22 @@ CREATE INDEX IF NOT EXISTS idx_reactions_message_id ON reactions(message_id);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512) NOT NULL DEFAULT '';
 ALTER TABLE chats ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512) NOT NULL DEFAULT '';
 
+ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+
+-- Имена при входе сравниваются без учёта регистра. Старые дубли нужно разобрать вручную.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM users GROUP BY LOWER(username) HAVING COUNT(*) > 1) THEN
+        RAISE EXCEPTION 'Duplicate usernames ignoring case; resolve duplicates before restarting';
+    END IF;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username));
+
 INSERT INTO users (username, email) VALUES
 ('amin', 'amin@chat.local'),
 ('fed', 'fed@chat.local'),
 ('ernest', 'ernest@chat.local')
-ON CONFLICT (username) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 ALTER TABLE chats ADD COLUMN IF NOT EXISTS is_global BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_chats_single_global ON chats (is_global) WHERE is_global = true;

@@ -9,7 +9,7 @@ import (
 
 type UserRepository interface {
 	GetByID(ctx context.Context, id int64) (*domain.User, error)
-	GetByLogin(ctx context.Context, login string) (*domain.User, error)
+	GetOrCreateByUsername(ctx context.Context, username string) (*domain.User, error)
 	Search(ctx context.Context, query string) ([]domain.User, error)
 	GetAll(ctx context.Context) ([]domain.User, error)
 	UpdateAvatar(ctx context.Context, userID int64, avatarURL string) error

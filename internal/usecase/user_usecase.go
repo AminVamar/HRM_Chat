@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -10,13 +9,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"chat-backend/internal/domain"
 	"chat-backend/internal/repository"
 )
 
 type UserUseCase interface {
-	GetByLogin(ctx context.Context, login string) (*domain.User, error)
+	GetOrCreateByUsername(ctx context.Context, username string) (*domain.User, error)
 	GetByID(ctx context.Context, id int64) (*domain.User, error)
 	Search(ctx context.Context, query string) ([]domain.User, error)
 	GetAll(ctx context.Context) ([]domain.User, error)
@@ -41,24 +41,15 @@ func NewUserUseCase(userRepo repository.UserRepository, uploadDir string) UserUs
 	}
 }
 
-func (u *userUseCase) GetByLogin(ctx context.Context, login string) (*domain.User, error) {
-	login = strings.TrimSpace(login)
-	if login == "" {
+func (u *userUseCase) GetOrCreateByUsername(ctx context.Context, username string) (*domain.User, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
 		return nil, domain.ErrUnauthorized
 	}
-
-	user, err := u.userRepo.GetByLogin(ctx, login)
-	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			return nil, domain.ErrUnauthorized
-		}
-		return nil, err
+	if !utf8.ValidString(username) || utf8.RuneCountInString(username) > 255 || strings.ContainsRune(username, 0) {
+		return nil, domain.ErrInvalidInput
 	}
-	if user == nil {
-		return nil, domain.ErrUnauthorized
-	}
-
-	return user, nil
+	return u.userRepo.GetOrCreateByUsername(ctx, username)
 }
 
 func (u *userUseCase) GetByID(ctx context.Context, id int64) (*domain.User, error) {
