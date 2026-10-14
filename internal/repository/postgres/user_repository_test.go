@@ -111,6 +111,20 @@ func TestUserRegistrationPostgres(t *testing.T) {
 	if _, err := repo.Search(ctx, "new"); err != nil {
 		t.Fatal(err)
 	}
+	ivan, err := repo.GetOrCreateByUsername(ctx, "Иван Петров")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, err := repo.SearchByName(ctx, "петров ИВАН")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) != 1 || found[0].ID != ivan.ID {
+		t.Fatalf("unexpected SearchByName result: %+v", found)
+	}
+	if found, err := repo.SearchByName(ctx, "Иван Сидоров"); err != nil || len(found) != 0 {
+		t.Fatalf("expected no users, got %+v, %v", found, err)
+	}
 	if _, err := repo.GetAll(ctx); err != nil {
 		t.Fatal(err)
 	}

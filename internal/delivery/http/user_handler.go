@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"chat-backend/internal/delivery/ws"
 	"chat-backend/internal/domain"
@@ -64,6 +65,38 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 
 	users, err := h.userUseCase.Search(r.Context(), query)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	for i := range users {
+		users[i].IsOnline = h.hub.IsUserOnline(users[i].ID)
+	}
+
+	RespondJSON(w, http.StatusOK, users)
+}
+
+// SearchByName godoc
+// @Summary      Поиск пользователей по имени и фамилии
+// @Description  Ищет пользователей по имени и фамилии. Каждое слово запроса должно встречаться в имени пользователя, порядок слов и регистр не важны
+// @Tags         пользователи
+// @Accept       json
+// @Produce      json
+// @Security     LoginHeaderAuth
+// @Param        query query string true "Имя и/или фамилия (например: Иван Петров)"
+// @Success      200 {object} Response{data=[]domain.User}
+// @Failure      400 {object} Response
+// @Failure      401 {object} Response
+// @Router       /users/search/name [get]
+func (h *UserHandler) SearchByName(w http.ResponseWriter, r *http.Request) {
+	query := strings.TrimSpace(r.URL.Query().Get("query"))
+	if query == "" {
+		RespondError(w, http.StatusBadRequest, "Параметр query обязателен")
+		return
+	}
+
+	users, err := h.userUseCase.SearchByName(r.Context(), query)
 	if err != nil {
 		RespondError(w, http.StatusInternalServerError, err.Error())
 		return

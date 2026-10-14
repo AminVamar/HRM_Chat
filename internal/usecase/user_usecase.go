@@ -19,6 +19,7 @@ type UserUseCase interface {
 	GetOrCreateByUsername(ctx context.Context, username string) (*domain.User, error)
 	GetByID(ctx context.Context, id int64) (*domain.User, error)
 	Search(ctx context.Context, query string) ([]domain.User, error)
+	SearchByName(ctx context.Context, query string) ([]domain.User, error)
 	GetAll(ctx context.Context) ([]domain.User, error)
 	UploadAvatar(ctx context.Context, userID int64, fileHeader *multipart.FileHeader) (*domain.User, error)
 	GetAvatarURL(ctx context.Context, userID int64) (string, error)
@@ -58,6 +59,10 @@ func (u *userUseCase) GetByID(ctx context.Context, id int64) (*domain.User, erro
 
 func (u *userUseCase) Search(ctx context.Context, query string) ([]domain.User, error) {
 	return u.userRepo.Search(ctx, query)
+}
+
+func (u *userUseCase) SearchByName(ctx context.Context, query string) ([]domain.User, error) {
+	return u.userRepo.SearchByName(ctx, query)
 }
 
 func (u *userUseCase) GetAll(ctx context.Context) ([]domain.User, error) {

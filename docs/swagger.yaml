@@ -1307,9 +1307,49 @@ paths:
       summary: Поиск пользователей
       tags:
       - пользователи
+  /users/search/name:
+    get:
+      consumes:
+      - application/json
+      description: Ищет пользователей по имени и фамилии. Каждое слово запроса должно
+        встречаться в имени пользователя, порядок слов и регистр не важны
+      parameters:
+      - description: 'Имя и/или фамилия (например: Иван Петров)'
+        in: query
+        name: query
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.User'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Поиск пользователей по имени и фамилии
+      tags:
+      - пользователи
 securityDefinitions:
   LoginHeaderAuth:
-    description: 'Передайте имя пользователя в Login (например: amin). Если пользователя нет, он будет создан автоматически. Поиск без учёта регистра.'
+    description: 'Передайте имя пользователя в Login (например: amin). Если пользователя
+      нет, он будет создан автоматически. Поиск без учёта регистра.'
     in: header
     name: Login
     type: apiKey

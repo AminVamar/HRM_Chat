@@ -11,6 +11,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id int64) (*domain.User, error)
 	GetOrCreateByUsername(ctx context.Context, username string) (*domain.User, error)
 	Search(ctx context.Context, query string) ([]domain.User, error)
+	SearchByName(ctx context.Context, query string) ([]domain.User, error)
 	GetAll(ctx context.Context) ([]domain.User, error)
 	UpdateAvatar(ctx context.Context, userID int64, avatarURL string) error
 }

@@ -36,6 +36,7 @@ func NewRouter(
 
 	api.HandleFunc("/users/me", userHandler.GetMe).Methods(http.MethodGet)
 	api.HandleFunc("/users/search", userHandler.Search).Methods(http.MethodGet)
+	api.HandleFunc("/users/search/name", userHandler.SearchByName).Methods(http.MethodGet)
 	api.HandleFunc("/users/avatar", userHandler.UploadAvatar).Methods(http.MethodPost)
 	api.HandleFunc("/users/{id:[0-9]+}/avatar", userHandler.GetAvatar).Methods(http.MethodGet)
 	api.HandleFunc("/users", userHandler.GetAll).Methods(http.MethodGet)

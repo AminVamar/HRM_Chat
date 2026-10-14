@@ -1760,6 +1760,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/search/name": {
+            "get": {
+                "security": [
+                    {
+                        "LoginHeaderAuth": []
+                    }
+                ],
+                "description": "Ищет пользователей по имени и фамилии. Каждое слово запроса должно встречаться в имени пользователя, порядок слов и регистр не важны",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "пользователи"
+                ],
+                "summary": "Поиск пользователей по имени и фамилии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Имя и/или фамилия (например: Иван Петров)",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.User"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{id}/avatar": {
             "get": {
                 "security": [

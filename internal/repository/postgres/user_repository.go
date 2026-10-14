@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"chat-backend/internal/domain"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
 type userRepository struct {
 	pool *pgxpool.Pool
@@ -82,6 +85,46 @@ func (r *userRepository) Search(ctx context.Context, query string) ([]domain.Use
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("user Search rows: %w", err)
+	}
+	return users, nil
+}
+
+func (r *userRepository) SearchByName(ctx context.Context, query string) ([]domain.User, error) {
+	words := strings.Fields(query)
+	if len(words) == 0 {
+		return []domain.User{}, nil
+	}
+
+	conditions := make([]string, len(words))
+	args := make([]any, len(words))
+	for i, word := range words {
+		conditions[i] = fmt.Sprintf("username ILIKE $%d ESCAPE '\\'", i+1)
+		args[i] = "%" + likeEscaper.Replace(word) + "%"
+	}
+
+	sqlQuery := `
+		SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at
+		FROM users
+		WHERE ` + strings.Join(conditions, " AND ") + `
+		ORDER BY username ASC
+		LIMIT 50
+	`
+	rows, err := r.pool.Query(ctx, sqlQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("user SearchByName: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]domain.User, 0)
+	for rows.Next() {
+		var u domain.User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("user SearchByName scan: %w", err)
+		}
+		users = append(users, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("user SearchByName rows: %w", err)
 	}
 	return users, nil
 }
