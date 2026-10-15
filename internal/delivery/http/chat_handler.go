@@ -39,6 +39,7 @@ func NewChatHandler(chatUseCase usecase.ChatUseCase, fileUseCase usecase.FileUse
 // @Success      201 {object} Response{data=domain.Chat}
 // @Failure      400 {object} Response
 // @Failure      401 {object} Response
+// @Failure      409 {object} Response
 // @Router       /chats [post]
 func (h *ChatHandler) CreateChat(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromContext(r.Context())
@@ -64,6 +65,10 @@ func (h *ChatHandler) CreateChat(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, domain.ErrUserNotFound) {
 			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, domain.ErrAlreadyExists) {
+			RespondError(w, http.StatusConflict, err.Error())
 			return
 		}
 		RespondError(w, http.StatusInternalServerError, err.Error())

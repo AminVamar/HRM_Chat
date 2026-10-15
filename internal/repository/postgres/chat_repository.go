@@ -142,6 +142,18 @@ func (r *chatRepository) GetDirectChat(ctx context.Context, user1ID, user2ID int
 	return c, nil
 }
 
+func (r *chatRepository) GetByDirectKey(ctx context.Context, directKey string) (*domain.Chat, error) {
+	query := `SELECT ` + chatColumns + ` FROM chats c WHERE c.direct_key = $1`
+	c, err := scanChat(r.pool.QueryRow(ctx, query, directKey))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, fmt.Errorf("chat GetByDirectKey: %w", err)
+	}
+	return c, nil
+}
+
 func (r *chatRepository) UpdateName(ctx context.Context, chatID int64, name string) error {
 	query := `UPDATE chats SET name = $1, updated_at = NOW() WHERE id = $2`
 	res, err := r.pool.Exec(ctx, query, name, chatID)

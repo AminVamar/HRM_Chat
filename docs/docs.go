@@ -139,6 +139,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/http.Response"
                         }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/http.Response"
+                        }
                     }
                 }
             }

@@ -284,6 +284,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/http.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/http.Response'
       security:
       - LoginHeaderAuth: []
       summary: Создать новый чат

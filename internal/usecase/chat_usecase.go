@@ -159,11 +159,7 @@ func (c *chatUseCase) CreateChat(ctx context.Context, creatorID int64, req domai
 	if err != nil {
 		// Чат для этой пары уже создан параллельным запросом — возвращаем его.
 		if errors.Is(err, domain.ErrAlreadyExists) {
-			existing, lookupErr := c.chatRepo.GetDirectChat(ctx, creatorID, targetUserID)
-			if lookupErr != nil {
-				return nil, err
-			}
-			return c.GetChatByID(ctx, creatorID, existing.ID)
+			return c.restoreDirectChat(ctx, creatorID, targetUserID, directKey)
 		}
 		return nil, err
 	}
@@ -202,6 +198,26 @@ func (c *chatUseCase) enrichChat(ctx context.Context, chat *domain.Chat, userID 
 			chat.UnreadCount = unread
 		}
 	}
+}
+
+func (c *chatUseCase) restoreDirectChat(ctx context.Context, creatorID, targetUserID int64, directKey string) (*domain.Chat, error) {
+	if directKey == "" {
+		return nil, domain.ErrAlreadyExists
+	}
+	existing, err := c.chatRepo.GetByDirectKey(ctx, directKey)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, domain.ErrAlreadyExists
+		}
+		return nil, err
+	}
+	if err := c.chatRepo.AddMember(ctx, existing.ID, creatorID, domain.RoleOwner); err != nil {
+		return nil, err
+	}
+	if err := c.chatRepo.AddMember(ctx, existing.ID, targetUserID, domain.RoleMember); err != nil {
+		return nil, err
+	}
+	return c.GetChatByID(ctx, creatorID, existing.ID)
 }
 
 func (c *chatUseCase) GetChatsForUser(ctx context.Context, userID int64) ([]domain.Chat, error) {

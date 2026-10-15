@@ -23,6 +23,7 @@ type ChatRepository interface {
 	GetByID(ctx context.Context, chatID int64) (*domain.Chat, error)
 	GetByUserID(ctx context.Context, userID int64) ([]domain.Chat, error)
 	GetDirectChat(ctx context.Context, user1ID, user2ID int64) (*domain.Chat, error)
+	GetByDirectKey(ctx context.Context, directKey string) (*domain.Chat, error)
 	UpdateName(ctx context.Context, chatID int64, name string) error
 	UpdateAvatar(ctx context.Context, chatID int64, avatarURL string) error
 	Delete(ctx context.Context, chatID int64) error
