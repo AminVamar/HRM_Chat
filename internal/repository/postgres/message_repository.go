@@ -21,7 +21,7 @@ func NewMessageRepository(pool *pgxpool.Pool) *messageRepository {
 
 const messageColumns = `
 	m.id, m.chat_id, m.sender_id, m.content, m.file_id, m.is_edited, m.is_deleted, m.created_at, m.updated_at,
-	u.id, u.username, COALESCE(u.email, ''), u.avatar_url, u.created_at, u.updated_at,
+	u.id, u.username, COALESCE(u.email, ''), u.first_name, u.last_name, u.avatar_url, u.created_at, u.updated_at,
 	f.id, f.filename, f.file_path, f.file_size, f.mime_type, f.uploader_id, f.created_at`
 
 const messageFrom = `
@@ -42,7 +42,7 @@ func scanMessage(row rowScanner) (*domain.Message, error) {
 
 	err := row.Scan(
 		&m.ID, &m.ChatID, &m.SenderID, &m.Content, &m.FileID, &m.IsEdited, &m.IsDeleted, &m.CreatedAt, &m.UpdatedAt,
-		&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt,
 		&fID, &fName, &fPath, &fSize, &fMime, &fUploaderID, &fCreatedAt,
 	)
 	if err != nil {

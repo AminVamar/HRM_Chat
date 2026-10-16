@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -45,6 +46,45 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusOK, user)
 }
 
+// UpdateMe godoc
+// @Summary      Указать имя и фамилию текущего пользователя
+// @Description  Сохраняет имя и фамилию авторизованного пользователя. Логин (username) не меняется. Оба поля обязательны, пробелы по краям удаляются
+// @Tags         пользователи
+// @Accept       json
+// @Produce      json
+// @Security     LoginHeaderAuth
+// @Param        body body domain.UpdateProfileDTO true "Имя и фамилия"
+// @Success      200 {object} Response{data=domain.User}
+// @Failure      400 {object} Response
+// @Failure      401 {object} Response
+// @Router       /users/me [put]
+func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
+	user, err := GetUserFromContext(r.Context())
+	if err != nil {
+		RespondError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	var dto domain.UpdateProfileDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		RespondError(w, http.StatusBadRequest, "Неверный формат JSON")
+		return
+	}
+
+	updated, err := h.userUseCase.UpdateProfile(r.Context(), user.ID, dto)
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidInput) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	updated.IsOnline = h.hub.IsUserOnline(updated.ID)
+	RespondJSON(w, http.StatusOK, updated)
+}
+
 // Search godoc
 // @Summary      Поиск пользователей
 // @Description  Поиск пользователей по имени пользователя или email
@@ -79,7 +119,7 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 // SearchByName godoc
 // @Summary      Поиск пользователей по имени и фамилии
-// @Description  Ищет пользователей по имени и фамилии. Каждое слово запроса должно встречаться в имени пользователя, порядок слов и регистр не важны
+// @Description  Ищет пользователей по имени и фамилии (first_name, last_name), а также по username. Каждое слово запроса должно встречаться в одном из этих полей, порядок слов и регистр не важны
 // @Tags         пользователи
 // @Accept       json
 // @Produce      json

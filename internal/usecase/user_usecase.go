@@ -23,6 +23,7 @@ type UserUseCase interface {
 	GetAll(ctx context.Context) ([]domain.User, error)
 	UploadAvatar(ctx context.Context, userID int64, fileHeader *multipart.FileHeader) (*domain.User, error)
 	GetAvatarURL(ctx context.Context, userID int64) (string, error)
+	UpdateProfile(ctx context.Context, userID int64, dto domain.UpdateProfileDTO) (*domain.User, error)
 }
 
 type userUseCase struct {
@@ -51,6 +52,20 @@ func (u *userUseCase) GetOrCreateByUsername(ctx context.Context, username string
 		return nil, domain.ErrInvalidInput
 	}
 	return u.userRepo.GetOrCreateByUsername(ctx, username)
+}
+
+func (u *userUseCase) UpdateProfile(ctx context.Context, userID int64, dto domain.UpdateProfileDTO) (*domain.User, error) {
+	firstName := strings.TrimSpace(dto.FirstName)
+	lastName := strings.TrimSpace(dto.LastName)
+	if firstName == "" || lastName == "" {
+		return nil, fmt.Errorf("%w: first_name and last_name are required", domain.ErrInvalidInput)
+	}
+	for _, name := range []string{firstName, lastName} {
+		if !utf8.ValidString(name) || utf8.RuneCountInString(name) > 255 || strings.ContainsRune(name, 0) {
+			return nil, domain.ErrInvalidInput
+		}
+	}
+	return u.userRepo.UpdateProfile(ctx, userID, firstName, lastName)
 }
 
 func (u *userUseCase) GetByID(ctx context.Context, id int64) (*domain.User, error) {

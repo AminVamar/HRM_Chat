@@ -29,9 +29,9 @@ const messageRetentionDays = 30
 // @BasePath  /api
 
 // @securityDefinitions.apikey LoginHeaderAuth
-// @in header
-// @name Login
-// @description Передайте имя пользователя в Login (например: amin). Если пользователя нет, он будет создан автоматически. Поиск без учёта регистра.
+// @in query
+// @name login
+// @description Передайте username в login (например: amin). Если пользователя нет, он будет создан автоматически. Регистр не учитывается. Имя и фамилия задаются отдельно через PUT /users/me.
 func main() {
 	cfg := config.LoadConfig()
 	ctx := context.Background()

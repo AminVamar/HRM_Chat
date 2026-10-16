@@ -22,9 +22,9 @@ func NewUserRepository(pool *pgxpool.Pool) *userRepository {
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, error) {
-	query := `SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, username, COALESCE(email, ''), first_name, last_name, avatar_url, created_at, updated_at FROM users WHERE id = $1`
 	var u domain.User
-	err := r.pool.QueryRow(ctx, query, id).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+	err := r.pool.QueryRow(ctx, query, id).Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -35,10 +35,10 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, e
 }
 
 func (r *userRepository) GetOrCreateByUsername(ctx context.Context, username string) (*domain.User, error) {
-	const selectQuery = `SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at
+	const selectQuery = `SELECT id, username, COALESCE(email, ''), first_name, last_name, avatar_url, created_at, updated_at
 		FROM users WHERE LOWER(username) = LOWER($1)`
 	var u domain.User
-	err := r.pool.QueryRow(ctx, selectQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+	err := r.pool.QueryRow(ctx, selectQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
 	if err == nil {
 		return &u, nil
 	}
@@ -48,11 +48,11 @@ func (r *userRepository) GetOrCreateByUsername(ctx context.Context, username str
 
 	const insertQuery = `INSERT INTO users (username) VALUES ($1)
 		ON CONFLICT (LOWER(username)) DO NOTHING
-		RETURNING id, username, COALESCE(email, ''), avatar_url, created_at, updated_at`
-	err = r.pool.QueryRow(ctx, insertQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+		RETURNING id, username, COALESCE(email, ''), first_name, last_name, avatar_url, created_at, updated_at`
+	err = r.pool.QueryRow(ctx, insertQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Другой запрос успел создать пользователя. Читаем его отдельным запросом.
-		err = r.pool.QueryRow(ctx, selectQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+		err = r.pool.QueryRow(ctx, selectQuery, username).Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("user get or create: %w", err)
@@ -62,7 +62,7 @@ func (r *userRepository) GetOrCreateByUsername(ctx context.Context, username str
 
 func (r *userRepository) Search(ctx context.Context, query string) ([]domain.User, error) {
 	sqlQuery := `
-		SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at
+		SELECT id, username, COALESCE(email, ''), first_name, last_name, avatar_url, created_at, updated_at
 		FROM users 
 		WHERE username ILIKE $1 OR email ILIKE $1
 		ORDER BY username ASC
@@ -78,7 +78,7 @@ func (r *userRepository) Search(ctx context.Context, query string) ([]domain.Use
 	users := make([]domain.User, 0)
 	for rows.Next() {
 		var u domain.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("user Search scan: %w", err)
 		}
 		users = append(users, u)
@@ -98,15 +98,15 @@ func (r *userRepository) SearchByName(ctx context.Context, query string) ([]doma
 	conditions := make([]string, len(words))
 	args := make([]any, len(words))
 	for i, word := range words {
-		conditions[i] = fmt.Sprintf("username ILIKE $%d ESCAPE '\\'", i+1)
+		conditions[i] = fmt.Sprintf("(first_name ILIKE $%[1]d ESCAPE '\\' OR last_name ILIKE $%[1]d ESCAPE '\\' OR username ILIKE $%[1]d ESCAPE '\\')", i+1)
 		args[i] = "%" + likeEscaper.Replace(word) + "%"
 	}
 
 	sqlQuery := `
-		SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at
+		SELECT id, username, COALESCE(email, ''), first_name, last_name, avatar_url, created_at, updated_at
 		FROM users
 		WHERE ` + strings.Join(conditions, " AND ") + `
-		ORDER BY username ASC
+		ORDER BY last_name ASC, first_name ASC, username ASC
 		LIMIT 50
 	`
 	rows, err := r.pool.Query(ctx, sqlQuery, args...)
@@ -118,7 +118,7 @@ func (r *userRepository) SearchByName(ctx context.Context, query string) ([]doma
 	users := make([]domain.User, 0)
 	for rows.Next() {
 		var u domain.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("user SearchByName scan: %w", err)
 		}
 		users = append(users, u)
@@ -130,7 +130,7 @@ func (r *userRepository) SearchByName(ctx context.Context, query string) ([]doma
 }
 
 func (r *userRepository) GetAll(ctx context.Context) ([]domain.User, error) {
-	sqlQuery := `SELECT id, username, COALESCE(email, ''), avatar_url, created_at, updated_at FROM users ORDER BY username ASC`
+	sqlQuery := `SELECT id, username, COALESCE(email, ''), first_name, last_name, avatar_url, created_at, updated_at FROM users ORDER BY username ASC`
 	rows, err := r.pool.Query(ctx, sqlQuery)
 	if err != nil {
 		return nil, fmt.Errorf("user GetAll: %w", err)
@@ -140,7 +140,7 @@ func (r *userRepository) GetAll(ctx context.Context) ([]domain.User, error) {
 	users := make([]domain.User, 0)
 	for rows.Next() {
 		var u domain.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("user GetAll scan: %w", err)
 		}
 		users = append(users, u)
@@ -149,6 +149,20 @@ func (r *userRepository) GetAll(ctx context.Context) ([]domain.User, error) {
 		return nil, fmt.Errorf("user GetAll rows: %w", err)
 	}
 	return users, nil
+}
+
+func (r *userRepository) UpdateProfile(ctx context.Context, userID int64, firstName, lastName string) (*domain.User, error) {
+	query := `UPDATE users SET first_name = $1, last_name = $2, updated_at = NOW() WHERE id = $3
+		RETURNING id, username, COALESCE(email, ''), first_name, last_name, avatar_url, created_at, updated_at`
+	var u domain.User
+	err := r.pool.QueryRow(ctx, query, firstName, lastName, userID).Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, fmt.Errorf("user UpdateProfile: %w", err)
+	}
+	return &u, nil
 }
 
 func (r *userRepository) UpdateAvatar(ctx context.Context, userID int64, avatarURL string) error {

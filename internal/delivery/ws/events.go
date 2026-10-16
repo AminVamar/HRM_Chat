@@ -108,6 +108,7 @@ type ErrorPayload struct {
 type OnlineUserDTO struct {
 	UserID   int64  `json:"user_id"`
 	Username string `json:"username"`
+	FullName string `json:"full_name"`
 }
 
 type OnlineUsersPayload struct {

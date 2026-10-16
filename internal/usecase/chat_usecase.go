@@ -139,7 +139,7 @@ func (c *chatUseCase) CreateChat(ctx context.Context, creatorID int64, req domai
 		if err != nil {
 			return nil, domain.ErrUserNotFound
 		}
-		req.Name = targetUser.Username
+		req.Name = targetUser.DisplayName()
 		directKey = directChatKey(creatorID, targetUserID)
 	} else {
 		if len(uniqueMemberIDs)+1 < 3 {
@@ -177,7 +177,7 @@ func (c *chatUseCase) enrichChat(ctx context.Context, chat *domain.Chat, userID 
 		if chat.Type == domain.ChatTypeDirect {
 			for _, m := range members {
 				if m.UserID != userID && m.User != nil {
-					chat.Name = m.User.Username
+					chat.Name = m.User.DisplayName()
 					chat.AvatarURL = m.User.AvatarURL
 					break
 				}

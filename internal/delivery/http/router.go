@@ -35,6 +35,7 @@ func NewRouter(
 	api.Use(authMiddleware.HeaderAuthMiddleware)
 
 	api.HandleFunc("/users/me", userHandler.GetMe).Methods(http.MethodGet)
+	api.HandleFunc("/users/me", userHandler.UpdateMe).Methods(http.MethodPut)
 	api.HandleFunc("/users/search", userHandler.Search).Methods(http.MethodGet)
 	api.HandleFunc("/users/search/name", userHandler.SearchByName).Methods(http.MethodGet)
 	api.HandleFunc("/users/avatar", userHandler.UploadAvatar).Methods(http.MethodPost)

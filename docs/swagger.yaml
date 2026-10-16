@@ -172,6 +172,15 @@ definitions:
         example: Updated text
         type: string
     type: object
+  domain.UpdateProfileDTO:
+    properties:
+      first_name:
+        example: Иван
+        type: string
+      last_name:
+        example: Петров
+        type: string
+    type: object
   domain.User:
     properties:
       avatar_url:
@@ -180,10 +189,16 @@ definitions:
         type: string
       email:
         type: string
+      first_name:
+        type: string
+      full_name:
+        type: string
       id:
         type: integer
       is_online:
         type: boolean
+      last_name:
+        type: string
       updated_at:
         type: string
       username:
@@ -1273,6 +1288,43 @@ paths:
       summary: Получить профиль текущего пользователя
       tags:
       - пользователи
+    put:
+      consumes:
+      - application/json
+      description: Сохраняет имя и фамилию авторизованного пользователя. Логин (username)
+        не меняется. Оба поля обязательны, пробелы по краям удаляются
+      parameters:
+      - description: Имя и фамилия
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateProfileDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.User'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.Response'
+      security:
+      - LoginHeaderAuth: []
+      summary: Указать имя и фамилию текущего пользователя
+      tags:
+      - пользователи
   /users/search:
     get:
       consumes:
@@ -1315,8 +1367,9 @@ paths:
     get:
       consumes:
       - application/json
-      description: Ищет пользователей по имени и фамилии. Каждое слово запроса должно
-        встречаться в имени пользователя, порядок слов и регистр не важны
+      description: Ищет пользователей по имени и фамилии (first_name, last_name),
+        а также по username. Каждое слово запроса должно встречаться в одном из этих
+        полей, порядок слов и регистр не важны
       parameters:
       - description: 'Имя и/или фамилия (например: Иван Петров)'
         in: query
@@ -1352,9 +1405,10 @@ paths:
       - пользователи
 securityDefinitions:
   LoginHeaderAuth:
-    description: 'Передайте имя пользователя в Login (например: amin). Если пользователя
-      нет, он будет создан автоматически. Поиск без учёта регистра.'
-    in: header
-    name: Login
+    description: 'Передайте username в login (например: amin). Если пользователя нет,
+      он будет создан автоматически. Регистр не учитывается. Имя и фамилия задаются
+      отдельно через PUT /users/me.'
+    in: query
+    name: login
     type: apiKey
 swagger: "2.0"

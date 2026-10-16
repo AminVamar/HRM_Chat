@@ -14,6 +14,7 @@ type UserRepository interface {
 	SearchByName(ctx context.Context, query string) ([]domain.User, error)
 	GetAll(ctx context.Context) ([]domain.User, error)
 	UpdateAvatar(ctx context.Context, userID int64, avatarURL string) error
+	UpdateProfile(ctx context.Context, userID int64, firstName, lastName string) (*domain.User, error)
 }
 
 type ChatRepository interface {

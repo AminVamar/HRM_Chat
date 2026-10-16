@@ -183,7 +183,7 @@ func (h *Hub) OnlineUsers() []OnlineUserDTO {
 	users := make([]OnlineUserDTO, 0, len(h.userClients))
 	for uid, clients := range h.userClients {
 		for c := range clients {
-			users = append(users, OnlineUserDTO{UserID: uid, Username: c.User.Username})
+			users = append(users, OnlineUserDTO{UserID: uid, Username: c.User.Username, FullName: c.User.JoinedName()})
 			break
 		}
 	}

@@ -1700,6 +1700,67 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "security": [
+                    {
+                        "LoginHeaderAuth": []
+                    }
+                ],
+                "description": "Сохраняет имя и фамилию авторизованного пользователя. Логин (username) не меняется. Оба поля обязательны, пробелы по краям удаляются",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "пользователи"
+                ],
+                "summary": "Указать имя и фамилию текущего пользователя",
+                "parameters": [
+                    {
+                        "description": "Имя и фамилия",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateProfileDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.Response"
+                        }
+                    }
+                }
             }
         },
         "/users/search": {
@@ -1773,7 +1834,7 @@ const docTemplate = `{
                         "LoginHeaderAuth": []
                     }
                 ],
-                "description": "Ищет пользователей по имени и фамилии. Каждое слово запроса должно встречаться в имени пользователя, порядок слов и регистр не важны",
+                "description": "Ищет пользователей по имени и фамилии (first_name, last_name), а также по username. Каждое слово запроса должно встречаться в одном из этих полей, порядок слов и регистр не важны",
                 "consumes": [
                     "application/json"
                 ],
@@ -2145,6 +2206,19 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.UpdateProfileDTO": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string",
+                    "example": "Иван"
+                },
+                "last_name": {
+                    "type": "string",
+                    "example": "Петров"
+                }
+            }
+        },
         "domain.User": {
             "type": "object",
             "properties": {
@@ -2157,11 +2231,20 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "first_name": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "is_online": {
                     "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string"
                 },
                 "updated_at": {
                     "type": "string"
@@ -2195,10 +2278,10 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "LoginHeaderAuth": {
-            "description": "Передайте имя пользователя в Login (например: amin). Если пользователя нет, он будет создан автоматически. Поиск без учёта регистра.",
+            "description": "Передайте username в login (например: amin). Если пользователя нет, он будет создан автоматически. Регистр не учитывается. Имя и фамилия задаются отдельно через PUT /users/me.",
             "type": "apiKey",
-            "name": "Login",
-            "in": "header"
+            "name": "login",
+            "in": "query"
         }
     }
 }`

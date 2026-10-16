@@ -202,14 +202,14 @@ func (r *chatRepository) IsMember(ctx context.Context, chatID, userID int64) (bo
 
 const memberColumns = `
 	cm.chat_id, cm.user_id, cm.role, cm.joined_at, cm.last_read_message_id,
-	u.id, u.username, COALESCE(u.email, ''), u.avatar_url, u.created_at, u.updated_at`
+	u.id, u.username, COALESCE(u.email, ''), u.first_name, u.last_name, u.avatar_url, u.created_at, u.updated_at`
 
 func scanMember(row rowScanner) (*domain.ChatMember, error) {
 	var cm domain.ChatMember
 	var u domain.User
 	err := row.Scan(
 		&cm.ChatID, &cm.UserID, &cm.Role, &cm.JoinedAt, &cm.LastReadMessageID,
-		&u.ID, &u.Username, &u.Email, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
